@@ -266,6 +266,23 @@
             cursor: pointer;
         }
         
+        /* Loading and error styles */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #4a5568;
+            font-size: 1.1rem;
+        }
+        
+        .error-message {
+            text-align: center;
+            padding: 20px;
+            color: #e53e3e;
+            background-color: #fff5f5;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
         @media (max-width: 768px) {
             .gallery-grid {
                 grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -323,67 +340,21 @@
         <div class="container">
             <h1>GALLERY</h1>
             
+            <!-- Error container -->
+            <div id="errorContainer" class="error-message" style="display: none;"></div>
+            
             <!-- Introduction Section -->
             <div class="intro-section">
                 <p>Welcome to our gallery showcasing our work and achievements. If you're interested in any of these projects or would like more information, please contact us and we'll be happy to provide additional details.</p>
                 <a href="#" class="contact-button">Contact Us <i class="fas fa-envelope"></i></a>
             </div>
             
+            <!-- Loading indicator -->
+            <div id="loadingIndicator" class="loading" style="display: none;">Loading gallery items...</div>
+            
             <!-- Gallery Grid -->
-            <div class="gallery-grid">
-                <!-- Gallery Item 1 -->
-                <div class="gallery-item">
-                    <img src="https://source.unsplash.com/random/600x400/?architecture" alt="Project 1" class="gallery-image">
-                    <div class="gallery-content">
-                        <h3 class="gallery-title">Project Alpha</h3>
-                        <p class="gallery-description">A modern approach to sustainable design, featuring innovative materials and energy-efficient solutions.</p>
-                    </div>
-                </div>
-                
-                <!-- Gallery Item 2 -->
-                <div class="gallery-item">
-                    <img src="https://source.unsplash.com/random/600x400/?interior" alt="Project 2" class="gallery-image">
-                    <div class="gallery-content">
-                        <h3 class="gallery-title">Urban Living</h3>
-                        <p class="gallery-description">Transforming compact spaces into functional and stylish living environments for the modern city dweller.</p>
-                    </div>
-                </div>
-                
-                <!-- Gallery Item 3 -->
-                <div class="gallery-item">
-                    <img src="https://source.unsplash.com/random/600x400/?building" alt="Project 3" class="gallery-image">
-                    <div class="gallery-content">
-                        <h3 class="gallery-title">Corporate Headquarters</h3>
-                        <p class="gallery-description">A landmark office building designed to inspire creativity and collaboration while reflecting company values.</p>
-                    </div>
-                </div>
-                
-                <!-- Gallery Item 4 -->
-                <div class="gallery-item">
-                    <img src="https://source.unsplash.com/random/600x400/?landscape" alt="Project 4" class="gallery-image">
-                    <div class="gallery-content">
-                        <h3 class="gallery-title">Green Spaces</h3>
-                        <p class="gallery-description">Integrating natural elements into urban environments to create peaceful retreats and sustainable ecosystems.</p>
-                    </div>
-                </div>
-                
-                <!-- Gallery Item 5 -->
-                <div class="gallery-item">
-                    <img src="https://source.unsplash.com/random/600x400/?house" alt="Project 5" class="gallery-image">
-                    <div class="gallery-content">
-                        <h3 class="gallery-title">Residential Complex</h3>
-                        <p class="gallery-description">A community-focused development that balances private living spaces with shared amenities and green areas.</p>
-                    </div>
-                </div>
-                
-                <!-- Gallery Item 6 -->
-                <div class="gallery-item">
-                    <img src="https://source.unsplash.com/random/600x400/?design" alt="Project 6" class="gallery-image">
-                    <div class="gallery-content">
-                        <h3 class="gallery-title">Innovative Design</h3>
-                        <p class="gallery-description">Pushing the boundaries of conventional design to create unique and functional spaces that inspire.</p>
-                    </div>
-                </div>
+            <div id="galleryGrid" class="gallery-grid">
+                <!-- Gallery items will be dynamically loaded here -->
             </div>
         </div>
     </div>
@@ -411,29 +382,177 @@
                 navMenu.classList.remove("active");
             }));
             
+            // Gallery functionality
+            const galleryGrid = document.getElementById('galleryGrid');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const errorContainer = document.getElementById('errorContainer');
+            
             // Image modal functionality
             const modal = document.getElementById("imageModal");
             const modalImg = document.getElementById("enlargedImage");
             const captionText = document.getElementById("modalCaption");
             const closeBtn = document.getElementsByClassName("close")[0];
             
-            // Get all gallery images
-            const galleryImages = document.querySelectorAll(".gallery-image");
+            // CSV URL - Update this variable with your actual Google Sheets CSV URL
+            const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQpgO1LHmtUquW__CUC_JJQAQ60jBvkgBjeueYrwjEeLCPtfVee0SK-dUFi5PeaKQpG1U3uQv641nV2/pub?gid=1027994568&single=true&output=csv";
             
-            // Add click event to each gallery image
-            galleryImages.forEach(img => {
-                img.addEventListener("click", function() {
-                    modal.style.display = "block";
-                    modalImg.src = this.src;
+            // Load gallery data from CSV
+            function loadGalleryData(url) {
+                // Clear previous gallery items and errors
+                galleryGrid.innerHTML = '';
+                errorContainer.style.display = 'none';
+                
+                // Show loading indicator
+                loadingIndicator.style.display = 'block';
+                
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch data. Make sure the Google Sheet is published and accessible.');
+                        }
+                        return response.text();
+                    })
+                    .then(csv => {
+                        parseGalleryCSV(csv);
+                        loadingIndicator.style.display = 'none';
+                    })
+                    .catch(error => {
+                        showError(error.message);
+                        loadingIndicator.style.display = 'none';
+                        
+                    });
+            }
+            
+            // Parse CSV data for gallery
+            function parseGalleryCSV(csv) {
+                const lines = csv.split('\n');
+                
+                if (lines.length < 2) {
+                    showError('The CSV file does not contain enough data');
+                    return;
+                }
+                
+                // Parse headers (first line)
+                const headerLine = lines[0];
+                const headers = parseCSVLine(headerLine);
+                
+                // Find column indices
+                const imageIndex = headers.findIndex(h => h.toLowerCase().includes('image'));
+                const nameIndex = headers.findIndex(h => h.toLowerCase().includes('name'));
+                const descIndex = headers.findIndex(h => h.toLowerCase().includes('description'));
+                
+                if (imageIndex === -1 || nameIndex === -1 || descIndex === -1) {
+                    showError('CSV must contain columns for Gallery Image, Gallery Name, and Gallery Description');
+                    return;
+                }
+                
+                // Parse data rows
+                for (let i = 1; i < lines.length; i++) {
+                    if (lines[i].trim() === '') continue;
                     
-                    // Get the title and description from the parent gallery item
-                    const galleryItem = this.closest(".gallery-item");
-                    const title = galleryItem.querySelector(".gallery-title").textContent;
-                    const description = galleryItem.querySelector(".gallery-description").textContent;
+                    const rowData = parseCSVLine(lines[i]);
+                    if (rowData.length >= Math.max(imageIndex, nameIndex, descIndex) + 1) {
+                        const imageUrl = rowData[imageIndex].trim();
+                        const name = rowData[nameIndex].trim();
+                        const description = rowData[descIndex].trim();
+                        if (imageUrl && name) {
+                            createGalleryItem(imageUrl, name, description);
+                        }
+                    }
+                }
+                
+                // Set up modal functionality for new gallery items
+                setupModalFunctionality();
+            }
+            
+            // Parse a CSV line, handling quoted values with commas
+            function parseCSVLine(line) {
+                const result = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
                     
-                    captionText.innerHTML = `<strong>${title}</strong><br>${description}`;
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(current);
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                
+                // Add the last field
+                result.push(current);
+                
+                return result;
+            }
+            
+            // Create a gallery item
+            function createGalleryItem(imageUrl, title, description) {
+                // Create gallery item container
+                const galleryItem = document.createElement('div');
+                galleryItem.className = 'gallery-item';
+                
+                // Create image element
+                const img = document.createElement('img');
+                img.className = 'gallery-image';
+                img.alt = title;
+                
+                img.src = imageUrl;
+                
+                // Handle image loading errors
+                img.onerror = function() {
+                    this.src = `https://source.unsplash.com/random/600x400/?${encodeURIComponent(title.toLowerCase())}`;
+                };
+                
+                // Create content container
+                const content = document.createElement('div');
+                content.className = 'gallery-content';
+                
+                // Create title
+                const titleElement = document.createElement('h3');
+                titleElement.className = 'gallery-title';
+                titleElement.textContent = title;
+                
+                // Create description
+                const descElement = document.createElement('p');
+                descElement.className = 'gallery-description';
+                descElement.textContent = description || 'No description available';
+                
+                // Assemble the gallery item
+                content.appendChild(titleElement);
+                content.appendChild(descElement);
+                galleryItem.appendChild(img);
+                galleryItem.appendChild(content);
+                
+                // Add to gallery grid
+                galleryGrid.appendChild(galleryItem);
+            }
+            
+            
+            // Set up modal functionality for gallery images
+            function setupModalFunctionality() {
+                // Get all gallery images
+                const galleryImages = document.querySelectorAll(".gallery-image");
+                
+                // Add click event to each gallery image
+                galleryImages.forEach(img => {
+                    img.addEventListener("click", function() {
+                        modal.style.display = "block";
+                        modalImg.src = this.src;
+                        
+                        // Get the title and description from the parent gallery item
+                        const galleryItem = this.closest(".gallery-item");
+                        const title = galleryItem.querySelector(".gallery-title").textContent;
+                        const description = galleryItem.querySelector(".gallery-description").textContent;
+                        
+                        captionText.innerHTML = `<strong>${title}</strong><br>${description}`;
+                    });
                 });
-            });
+            }
             
             // Close modal when clicking the × button
             closeBtn.addEventListener("click", function() {
@@ -453,6 +572,20 @@
                     modal.style.display = "none";
                 }
             });
+            
+            // Show error message
+            function showError(message) {
+                errorContainer.textContent = message;
+                errorContainer.style.display = 'block';
+            }
+            
+            // Load gallery data on page load
+            loadGalleryData(csvUrl);
+            
+            // Refresh gallery data every 5 minutes (300000 ms)
+            setInterval(() => {
+                loadGalleryData(csvUrl);
+            }, 300000);
         });
     </script>
 </body>
