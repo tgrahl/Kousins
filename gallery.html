@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - Google Sheets Table</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            padding: 0;
+            margin: 0;
+        }
+        
+        /* Navigation Styles */
+        .navbar {
+            background-color: #2d3748;
+            color: white;
+            padding: 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+        
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 15px 0;
+        }
+        
+        .nav-menu {
+            display: flex;
+            list-style: none;
+        }
+        
+        .nav-item {
+            margin: 0;
+        }
+        
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            padding: 20px 15px;
+            display: block;
+            transition: background-color 0.3s;
+        }
+        
+        .nav-link:hover {
+            background-color: #4a5568;
+        }
+
+        .nav-link.active {
+            background-color: #4a5568;
+            font-weight: bold;
+        }
+        
+        .hamburger {
+            display: none;
+            cursor: pointer;
+            padding: 15px 0;
+        }
+        
+        .bar {
+            display: block;
+            width: 25px;
+            height: 3px;
+            margin: 5px auto;
+            background-color: white;
+            transition: all 0.3s ease-in-out;
+        }
+        
+        @media (max-width: 768px) {
+            .hamburger {
+                display: block;
+            }
+            
+            .hamburger.active .bar:nth-child(2) {
+                opacity: 0;
+            }
+            
+            .hamburger.active .bar:nth-child(1) {
+                transform: translateY(8px) rotate(45deg);
+            }
+            
+            .hamburger.active .bar:nth-child(3) {
+                transform: translateY(-8px) rotate(-45deg);
+            }
+            
+            .nav-menu {
+                position: fixed;
+                left: -100%;
+                top: 60px;
+                flex-direction: column;
+                background-color: #2d3748;
+                width: 100%;
+                text-align: center;
+                transition: 0.3s;
+                box-shadow: 0 10px 10px rgba(0, 0, 0, 0.1);
+            }
+            
+            .nav-menu.active {
+                left: 0;
+            }
+            
+            .nav-item {
+                margin: 0;
+                width: 100%;
+                border-bottom: 1px solid #4a5568;
+            }
+            
+            .nav-link {
+                padding: 15px;
+            }
+        }
+        
+        /* Main Content Styles */
+        .main-content {
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2d3748;
+        }
+        
+        /* Gallery specific styles */
+        .intro-section {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+        }
+        
+        .intro-section p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #4a5568;
+            max-width: 800px;
+            margin: 0 auto 20px;
+        }
+        
+        .contact-button {
+            display: inline-block;
+            background-color: #4299e1;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        
+        .contact-button:hover {
+            background-color: #3182ce;
+        }
+        
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .gallery-item {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            background-color: white;
+        }
+        
+        .gallery-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .gallery-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+            cursor: pointer;
+        }
+        
+        .gallery-content {
+            padding: 15px;
+        }
+        
+        .gallery-title {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+        
+        .gallery-description {
+            color: #4a5568;
+            line-height: 1.5;
+        }
+        
+        /* Modal styles for image enlargement */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+        }
+        
+        .modal-content {
+            display: block;
+            margin: 0 auto;
+            max-width: 90%;
+            max-height: 90vh;
+            object-fit: contain;
+        }
+        
+        .modal-caption {
+            color: white;
+            text-align: center;
+            padding: 15px 0;
+            max-width: 80%;
+            margin: 0 auto;
+        }
+        
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 25px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        @media (max-width: 768px) {
+            .gallery-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 15px;
+            }
+            
+            .intro-section {
+                padding: 15px;
+            }
+            
+            .intro-section p {
+                font-size: 1rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .gallery-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .gallery-image {
+                height: 180px;
+            }
+            
+            .contact-button {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">Logo</div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="index.html" class="nav-link">Home</a></li>
+                <li class="nav-item"><a href="about.html" class="nav-link">About Us</a></li>
+                <li class="nav-item"><a href="index.html" class="nav-link">Index</a></li>
+                <li class="nav-item"><a href="gallery.html" class="nav-link active">Gallery</a></li>
+                <li class="nav-item"><a href="#" class="nav-link">Kollaborations</a></li>
+                <li class="nav-item"><a href="#" class="nav-link">Kontact Us</a></li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            <h1>GALLERY</h1>
+            
+            <!-- Introduction Section -->
+            <div class="intro-section">
+                <p>Welcome to our gallery showcasing our work and achievements. If you're interested in any of these projects or would like more information, please contact us and we'll be happy to provide additional details.</p>
+                <a href="#" class="contact-button">Contact Us <i class="fas fa-envelope"></i></a>
+            </div>
+            
+            <!-- Gallery Grid -->
+            <div class="gallery-grid">
+                <!-- Gallery Item 1 -->
+                <div class="gallery-item">
+                    <img src="https://source.unsplash.com/random/600x400/?architecture" alt="Project 1" class="gallery-image">
+                    <div class="gallery-content">
+                        <h3 class="gallery-title">Project Alpha</h3>
+                        <p class="gallery-description">A modern approach to sustainable design, featuring innovative materials and energy-efficient solutions.</p>
+                    </div>
+                </div>
+                
+                <!-- Gallery Item 2 -->
+                <div class="gallery-item">
+                    <img src="https://source.unsplash.com/random/600x400/?interior" alt="Project 2" class="gallery-image">
+                    <div class="gallery-content">
+                        <h3 class="gallery-title">Urban Living</h3>
+                        <p class="gallery-description">Transforming compact spaces into functional and stylish living environments for the modern city dweller.</p>
+                    </div>
+                </div>
+                
+                <!-- Gallery Item 3 -->
+                <div class="gallery-item">
+                    <img src="https://source.unsplash.com/random/600x400/?building" alt="Project 3" class="gallery-image">
+                    <div class="gallery-content">
+                        <h3 class="gallery-title">Corporate Headquarters</h3>
+                        <p class="gallery-description">A landmark office building designed to inspire creativity and collaboration while reflecting company values.</p>
+                    </div>
+                </div>
+                
+                <!-- Gallery Item 4 -->
+                <div class="gallery-item">
+                    <img src="https://source.unsplash.com/random/600x400/?landscape" alt="Project 4" class="gallery-image">
+                    <div class="gallery-content">
+                        <h3 class="gallery-title">Green Spaces</h3>
+                        <p class="gallery-description">Integrating natural elements into urban environments to create peaceful retreats and sustainable ecosystems.</p>
+                    </div>
+                </div>
+                
+                <!-- Gallery Item 5 -->
+                <div class="gallery-item">
+                    <img src="https://source.unsplash.com/random/600x400/?house" alt="Project 5" class="gallery-image">
+                    <div class="gallery-content">
+                        <h3 class="gallery-title">Residential Complex</h3>
+                        <p class="gallery-description">A community-focused development that balances private living spaces with shared amenities and green areas.</p>
+                    </div>
+                </div>
+                
+                <!-- Gallery Item 6 -->
+                <div class="gallery-item">
+                    <img src="https://source.unsplash.com/random/600x400/?design" alt="Project 6" class="gallery-image">
+                    <div class="gallery-content">
+                        <h3 class="gallery-title">Innovative Design</h3>
+                        <p class="gallery-description">Pushing the boundaries of conventional design to create unique and functional spaces that inspire.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for enlarged images -->
+    <div id="imageModal" class="modal">
+        <span class="close">&times;</span>
+        <img class="modal-content" id="enlargedImage">
+        <div id="modalCaption" class="modal-caption"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mobile menu toggle
+            const hamburger = document.querySelector(".hamburger");
+            const navMenu = document.querySelector(".nav-menu");
+            
+            hamburger.addEventListener("click", () => {
+                hamburger.classList.toggle("active");
+                navMenu.classList.toggle("active");
+            });
+            
+            document.querySelectorAll(".nav-link").forEach(n => n.addEventListener("click", () => {
+                hamburger.classList.remove("active");
+                navMenu.classList.remove("active");
+            }));
+            
+            // Image modal functionality
+            const modal = document.getElementById("imageModal");
+            const modalImg = document.getElementById("enlargedImage");
+            const captionText = document.getElementById("modalCaption");
+            const closeBtn = document.getElementsByClassName("close")[0];
+            
+            // Get all gallery images
+            const galleryImages = document.querySelectorAll(".gallery-image");
+            
+            // Add click event to each gallery image
+            galleryImages.forEach(img => {
+                img.addEventListener("click", function() {
+                    modal.style.display = "block";
+                    modalImg.src = this.src;
+                    
+                    // Get the title and description from the parent gallery item
+                    const galleryItem = this.closest(".gallery-item");
+                    const title = galleryItem.querySelector(".gallery-title").textContent;
+                    const description = galleryItem.querySelector(".gallery-description").textContent;
+                    
+                    captionText.innerHTML = `<strong>${title}</strong><br>${description}`;
+                });
+            });
+            
+            // Close modal when clicking the × button
+            closeBtn.addEventListener("click", function() {
+                modal.style.display = "none";
+            });
+            
+            // Close modal when clicking outside the image
+            modal.addEventListener("click", function(event) {
+                if (event.target === modal) {
+                    modal.style.display = "none";
+                }
+            });
+            
+            // Close modal with Escape key
+            document.addEventListener("keydown", function(event) {
+                if (event.key === "Escape" && modal.style.display === "block") {
+                    modal.style.display = "none";
+                }
+            });
+        });
+    </script>
+</body>
+</html>

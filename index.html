@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets Searchable Table</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            padding: 0;
+            margin: 0;
+        }
+        
+        /* Navigation Styles */
+        .navbar {
+            background-color: #2d3748;
+            color: white;
+            padding: 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+        
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 15px 0;
+        }
+        
+        .nav-menu {
+            display: flex;
+            list-style: none;
+        }
+        
+        .nav-item {
+            margin: 0;
+        }
+        
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            padding: 20px 15px;
+            display: block;
+            transition: background-color 0.3s;
+        }
+        
+        .nav-link:hover {
+            background-color: #4a5568;
+        }
+        
+        .hamburger {
+            display: none;
+            cursor: pointer;
+            padding: 15px 0;
+        }
+        
+        .bar {
+            display: block;
+            width: 25px;
+            height: 3px;
+            margin: 5px auto;
+            background-color: white;
+            transition: all 0.3s ease-in-out;
+        }
+        
+        @media (max-width: 768px) {
+            .hamburger {
+                display: block;
+            }
+            
+            .hamburger.active .bar:nth-child(2) {
+                opacity: 0;
+            }
+            
+            .hamburger.active .bar:nth-child(1) {
+                transform: translateY(8px) rotate(45deg);
+            }
+            
+            .hamburger.active .bar:nth-child(3) {
+                transform: translateY(-8px) rotate(-45deg);
+            }
+            
+            .nav-menu {
+                position: fixed;
+                left: -100%;
+                top: 60px;
+                flex-direction: column;
+                background-color: #2d3748;
+                width: 100%;
+                text-align: center;
+                transition: 0.3s;
+                box-shadow: 0 10px 10px rgba(0, 0, 0, 0.1);
+            }
+            
+            .nav-menu.active {
+                left: 0;
+            }
+            
+            .nav-item {
+                margin: 0;
+                width: 100%;
+                border-bottom: 1px solid #4a5568;
+            }
+            
+            .nav-link {
+                padding: 15px;
+            }
+        }
+        
+        /* Main Content Styles */
+        .main-content {
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2d3748;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+        }
+        
+        /* Filter styles */
+        .filter-container {
+            margin-bottom: 20px;
+        }
+        
+        .filter-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #4a5568;
+            display: flex;
+            align-items: center;
+        }
+        
+        .filter-title::before {
+            content: "🔍";
+            margin-right: 8px;
+        }
+        
+        .filter-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .filter-tag {
+            background-color: #edf2f7;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 6px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        
+        .filter-tag:hover {
+            background-color: #e2e8f0;
+        }
+        
+        .filter-tag.active {
+            background-color: #4299e1;
+            color: white;
+            border-color: #3182ce;
+        }
+        
+        .filter-tag.all {
+            background-color: #2d3748;
+            color: white;
+            border-color: #1a202c;
+        }
+        
+        .filter-tag.all:hover {
+            background-color: #4a5568;
+        }
+        
+        .filter-tag.all.active {
+            background-color: #1a202c;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #4a5568;
+            border-bottom: 2px solid #e2e8f0;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        th:hover {
+            background-color: #edf2f7;
+        }
+        
+        th::after {
+            content: '↕';
+            position: absolute;
+            right: 8px;
+            color: #a0aec0;
+            font-size: 14px;
+        }
+        
+        th.asc::after {
+            content: '↑';
+            color: #4299e1;
+        }
+        
+        th.desc::after {
+            content: '↓';
+            color: #4299e1;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        tr:hover {
+            background-color: #f7fafc;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: #718096;
+            font-style: italic;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #4a5568;
+        }
+        
+        .error-message {
+            text-align: center;
+            padding: 20px;
+            color: #e53e3e;
+            background-color: #fff5f5;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .data-info {
+            text-align: right;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #718096;
+        }
+        
+        /* Icon styles */
+        .icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background-color: #4299e1;
+            color: white;
+            border-radius: 50%;
+            text-decoration: none;
+            font-size: 12px;
+        }
+        
+        .icon:hover {
+            background-color: #3182ce;
+        }
+        
+        /* Practice tags in table */
+        .practice-tag {
+            display: inline-block;
+            background-color: #e2e8f0;
+            border-radius: 12px;
+            padding: 2px 8px;
+            margin: 2px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            th, td {
+                padding: 10px;
+            }
+            
+            .filter-tags {
+                gap: 6px;
+            }
+            
+            .filter-tag {
+                padding: 4px 10px;
+                font-size: 13px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            th, td {
+                padding: 8px 5px;
+                font-size: 14px;
+            }
+            
+            .filter-tags {
+                gap: 4px;
+            }
+            
+            .filter-tag {
+                padding: 3px 8px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">Logo</div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="index.html" class="nav-link active">Home</a></li>
+                <li class="nav-item"><a href="about.html" class="nav-link">About Us</a></li>
+                <li class="nav-item"><a href="index.html" class="nav-link">Index</a></li>
+                <li class="nav-item"><a href="gallery.html" class="nav-link">Gallery</a></li>
+                <li class="nav-item"><a href="#" class="nav-link">Kollaborations</a></li>
+                <li class="nav-item"><a href="contact.html" class="nav-link">Kontact Us</a></li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            <h1>INDEX</h1>
+            
+            <div id="errorContainer" class="error-message" style="display: none;"></div>
+            
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search for anything...">
+            </div>
+            
+            <!-- Practice Filter -->
+            <div class="filter-container" id="practiceFilterContainer">
+                <div class="filter-title">Filter by Practice</div>
+                <div class="filter-tags" id="practiceFilterTags">
+                    <!-- Filter tags will be dynamically generated -->
+                    <div class="filter-tag all active">All</div>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <div id="loadingIndicator" class="loading">Loading data from Google Sheets...</div>
+                <table id="dataTable" style="display: none;">
+                    <thead id="tableHead">
+                        <!-- Headers will be dynamically generated -->
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Data will be dynamically loaded -->
+                    </tbody>
+                </table>
+                <div id="noResults" class="no-results" style="display: none;">No matching records found</div>
+            </div>
+            
+            <div id="dataInfo" class="data-info"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mobile menu toggle
+            const hamburger = document.querySelector(".hamburger");
+            const navMenu = document.querySelector(".nav-menu");
+            
+            hamburger.addEventListener("click", () => {
+                hamburger.classList.toggle("active");
+                navMenu.classList.toggle("active");
+            });
+            
+            document.querySelectorAll(".nav-link").forEach(n => n.addEventListener("click", () => {
+                hamburger.classList.remove("active");
+                navMenu.classList.remove("active");
+            }));
+            
+            // Table functionality
+            const searchInput = document.getElementById('searchInput');
+            const table = document.getElementById('dataTable');
+            const tableHead = document.getElementById('tableHead');
+            const tableBody = document.getElementById('tableBody');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const noResults = document.getElementById('noResults');
+            const errorContainer = document.getElementById('errorContainer');
+            const dataInfo = document.getElementById('dataInfo');
+            const practiceFilterContainer = document.getElementById('practiceFilterContainer');
+            const practiceFilterTags = document.getElementById('practiceFilterTags');
+            
+            // The specific Google Sheets URL
+            const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQpgO1LHmtUquW__CUC_JJQAQ60jBvkgBjeueYrwjEeLCPtfVee0SK-dUFi5PeaKQpG1U3uQv641nV2/pub?output=csv";
+            
+            let rows = [];
+            let headers = [];
+            let sortColumn = null;
+            let sortDirection = 'asc';
+            let practiceColumnIndex = -1;
+            let activePracticeFilters = [];
+            let allPractices = [];
+            
+            // Set up filter event handlers
+            setupFilterHandlers();
+            
+            // Load data automatically
+            fetchCSV(sheetUrl);
+            
+            // Split practice string into individual practices
+            function splitPractices(practiceString) {
+                if (!practiceString) return [];
+                
+                // Replace various separators with a standard comma
+                let normalized = practiceString
+                    .replace(/\s*&\s*/g, ', ')  // Replace & with comma
+                    .replace(/\s*,\s*/g, ',')  // Normalize spaces around commas
+                    .replace(/\s+/g, ' ');  // Normalize multiple spaces
+                
+                // Split by comma and trim each practice
+                return normalized.split(',')
+                    .map(p => p.trim())
+                    .filter(p => p);  // Remove empty strings
+            }
+            
+            // Set up filter handlers
+            function setupFilterHandlers() {
+                document.querySelectorAll('.filter-tag').forEach(tag => {
+                    tag.addEventListener('click', function() {
+                        const practice = this.dataset.practice;
+                        
+                        if (practice === 'all' || !practice) {
+                            // Clear all filters
+                            document.querySelectorAll('.filter-tag').forEach(t => {
+                                t.classList.remove('active');
+                            });
+                            document.querySelector('.filter-tag.all').classList.add('active');
+                            activePracticeFilters = [];
+                        } else {
+                            // Remove "All" selection
+                            document.querySelector('.filter-tag.all').classList.remove('active');
+                            
+                            // Toggle this filter
+                            this.classList.toggle('active');
+                            
+                            // Update active filters
+                            if (this.classList.contains('active')) {
+                                activePracticeFilters.push(practice);
+                            } else {
+                                activePracticeFilters = activePracticeFilters.filter(p => p !== practice);
+                            }
+                            
+                            // If no filters are active, activate "All"
+                            if (activePracticeFilters.length === 0) {
+                                document.querySelector('.filter-tag.all').classList.add('active');
+                            }
+                        }
+                        
+                        // Apply filters
+                        applyFilters();
+                    });
+                });
+            }
+            
+            // Fetch and parse CSV
+            function fetchCSV(url) {
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch data. Make sure the Google Sheet is published and accessible.');
+                        }
+                        return response.text();
+                    })
+                    .then(csv => {
+                        parseCSV(csv);
+                    })
+                    .catch(error => {
+                        showError(error.message);
+                        loadingIndicator.style.display = 'none';
+                    });
+            }
+            
+            // Parse CSV data
+            function parseCSV(csv) {
+                const lines = csv.split('\n');
+                
+                if (lines.length < 2) {
+                    showError('The CSV file does not contain enough data');
+                    loadingIndicator.style.display = 'none';
+                    return;
+                }
+                
+                // Parse headers (first line)
+                const headerLine = lines[0];
+                headers = parseCSVLine(headerLine);
+                
+                // Find the Practice column index - try multiple possible names
+                practiceColumnIndex = -1;
+                const possibleNames = ['practice', 'Practice', 'PRACTICE', 'practices', 'Practices'];
+                
+                for (const name of possibleNames) {
+                    const index = headers.findIndex(header => header === name);
+                    if (index !== -1) {
+                        practiceColumnIndex = index;
+                        break;
+                    }
+                }
+                
+                // If still not found, look for partial matches
+                if (practiceColumnIndex === -1) {
+                    for (let i = 0; i < headers.length; i++) {
+                        if (headers[i].toLowerCase().includes('practice')) {
+                            practiceColumnIndex = i;
+                            break;
+                        }
+                    }
+                }
+                
+                console.log("Headers:", headers);
+                console.log("Practice column index:", practiceColumnIndex);
+                
+                // Create table headers
+                tableHead.innerHTML = '';
+                const headerRow = document.createElement('tr');
+                headers.forEach((header, index) => {
+                    const th = document.createElement('th');
+                    th.textContent = header;
+                    th.dataset.sort = header;
+                    th.dataset.index = index;
+                    headerRow.appendChild(th);
+                    
+                    // Add click event for sorting
+                    th.addEventListener('click', function() {
+                        sortTable(this);
+                    });
+                });
+                tableHead.appendChild(headerRow);
+                
+                // Parse data rows
+                const dataRows = [];
+                for (let i = 1; i < lines.length; i++) {
+                    if (lines[i].trim() === '') continue;
+                    
+                    const rowData = parseCSVLine(lines[i]);
+                    if (rowData.length === headers.length) {
+                        dataRows.push(rowData);
+                    }
+                }
+                
+                // Populate table
+                populateTable(dataRows);
+                
+                // Create practice filters if the practice column exists
+                if (practiceColumnIndex !== -1) {
+                    createPracticeFilters(dataRows);
+                }
+                
+                // Update data info
+                dataInfo.textContent = `Total records: ${dataRows.length} • Last updated: ${new Date().toLocaleString()}`;
+            }
+            
+            // Create practice filters
+            function createPracticeFilters(dataRows) {
+                // Extract and split all practices
+                const practicesSet = new Set();
+                
+                dataRows.forEach(row => {
+                    const practiceValue = row[practiceColumnIndex];
+                    if (practiceValue) {
+                        const practices = splitPractices(practiceValue);
+                        practices.forEach(practice => {
+                            if (practice) practicesSet.add(practice);
+                        });
+                    }
+                });
+                
+                // Convert to array and sort
+                allPractices = Array.from(practicesSet).sort();
+                
+                console.log("Found practices:", allPractices);
+                
+                // Clear existing filters
+                practiceFilterTags.innerHTML = '';
+                
+                // Add "All" filter
+                const allTag = document.createElement('div');
+                allTag.className = 'filter-tag all active';
+                allTag.textContent = 'All';
+                allTag.dataset.practice = 'all';
+                practiceFilterTags.appendChild(allTag);
+                
+                // Add filter for each practice
+                allPractices.forEach(practice => {
+                    const tag = document.createElement('div');
+                    tag.className = 'filter-tag';
+                    tag.textContent = practice;
+                    tag.dataset.practice = practice;
+                    practiceFilterTags.appendChild(tag);
+                });
+                
+                // Set up filter handlers
+                setupFilterHandlers();
+            }
+            
+            // Parse a CSV line, handling quoted values with commas
+            function parseCSVLine(line) {
+                const result = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(current);
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                
+                // Add the last field
+                result.push(current);
+                
+                return result;
+            }
+            
+            // Populate table with data
+            function populateTable(dataRows) {
+                tableBody.innerHTML = '';
+                rows = [];
+                
+                dataRows.forEach(rowData => {
+                    const tr = document.createElement('tr');
+                    
+                    // Store the practices as a data attribute for filtering
+                    if (practiceColumnIndex !== -1) {
+                        const practiceValue = rowData[practiceColumnIndex] ? rowData[practiceColumnIndex].trim() : '';
+                        const practices = splitPractices(practiceValue);
+                        tr.dataset.practices = JSON.stringify(practices);
+                    }
+                    
+                    rowData.forEach((cellData, index) => {
+                        const td = document.createElement('td');
+                        
+                        // Check if this is the practice column
+                        if (index === practiceColumnIndex && cellData) {
+                            const practices = splitPractices(cellData);
+                            
+                            // Create a tag for each practice
+                            practices.forEach(practice => {
+                                const span = document.createElement('span');
+                                span.className = 'practice-tag';
+                                span.textContent = practice;
+                                td.appendChild(span);
+                            });
+                        }
+                        // Check if this is an email column
+                        else if (headers[index] && (headers[index].toLowerCase().includes('e-mail') || headers[index].toLowerCase().includes('email'))) {
+                            if (cellData && cellData.includes('@')) {
+                                const a = document.createElement('a');
+                                a.href = `mailto:${cellData}`;
+                                a.className = 'icon';
+                                a.title = cellData; // Show email on hover
+                                a.innerHTML = '✉'; // Email icon
+                                a.setAttribute('aria-label', `Send email to ${cellData}`);
+                                td.appendChild(a);
+                            } else {
+                                td.textContent = cellData || '';
+                            }
+                        } 
+                        // Check if this is a social media column
+                        else if (headers[index] && headers[index].toLowerCase().includes('social media')) {
+                            if (cellData && cellData.includes('www')) {
+                                const a = document.createElement('a');
+                                a.href = cellData; // Set correct URL
+                                a.className = 'icon';
+                                a.title = `Visit ${cellData}`;
+                                a.target = '_blank'; // Open link in a new tab
+                                a.rel = 'noopener noreferrer'; // Security best practice
+
+                                // Determine the icon based on the URL
+                                if (cellData.includes('instagram.com')) {
+                                    a.innerHTML = '<i class="fa-brands fa-instagram"></i>'; // FontAwesome Instagram
+                                } else if (cellData.includes('facebook.com')) {
+                                    a.innerHTML = '<i class="fa-brands fa-facebook"></i>'; // FontAwesome Facebook
+                                } else {
+                                    a.innerHTML = '🌐'; // Default globe icon
+                                }
+
+                                td.appendChild(a);
+                            } else {
+                                td.textContent = cellData || '';
+                            }
+                        } 
+                        // Check if this is a phone/contact number column
+                        else if (headers[index] && (headers[index].toLowerCase().includes('contact') || headers[index].toLowerCase().includes('number') || headers[index].toLowerCase().includes('phone'))) {
+                            if (cellData && cellData.trim() !== '') {
+                                const a = document.createElement('a');
+                                a.href = `tel:${cellData.replace(/\D/g, '')}`;
+                                a.textContent = cellData;
+                                td.appendChild(a);
+                            } else {
+                                td.textContent = cellData || '';
+                            }
+                        }
+                        // Regular cell
+                        else {
+                            td.textContent = cellData || '';
+                        }
+                        
+                        tr.appendChild(td);
+                    });
+                    
+                    tableBody.appendChild(tr);
+                    rows.push(tr);
+                });
+                
+                // Show table, hide loading
+                loadingIndicator.style.display = 'none';
+                table.style.display = 'table';
+                
+                // Enable search
+                enableSearch();
+            }
+            
+            // Enable search functionality
+            function enableSearch() {
+                searchInput.addEventListener('input', function() {
+                    applyFilters();
+                });
+                
+                // Clear any previous search
+                searchInput.value = '';
+                noResults.style.display = 'none';
+            }
+            
+            // Apply both search and practice filters
+            function applyFilters() {
+                const searchTerm = searchInput.value.toLowerCase();
+                let visibleCount = 0;
+                
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    
+                    // Get practices from data attribute
+                    let practices = [];
+                    try {
+                        practices = JSON.parse(row.dataset.practices || '[]');
+                    } catch (e) {
+                        practices = [];
+                    }
+                    
+                    // Check if row matches search term
+                    const matchesSearch = text.includes(searchTerm);
+                    
+                    // Check if row matches practice filter
+                    const matchesPractice = activePracticeFilters.length === 0 || 
+                                           activePracticeFilters.some(filter => practices.includes(filter));
+                    
+                    // Show row if it matches both filters
+                    const isVisible = matchesSearch && matchesPractice;
+                    row.style.display = isVisible ? '' : 'none';
+                    
+                    if (isVisible) visibleCount++;
+                });
+                
+                noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+                
+                // Update data info with filtered count
+                if (searchTerm || activePracticeFilters.length > 0) {
+                    dataInfo.textContent = `Showing ${visibleCount} of ${rows.length} records • Last updated: ${new Date().toLocaleString()}`;
+                } else {
+                    dataInfo.textContent = `Total records: ${rows.length} • Last updated: ${new Date().toLocaleString()}`;
+                }
+            }
+            
+            // Sort table by column
+            function sortTable(header) {
+                const column = header.dataset.sort;
+                const columnIndex = parseInt(header.dataset.index);
+                
+                // Reset all headers
+                tableHead.querySelectorAll('th').forEach(h => {
+                    h.classList.remove('asc', 'desc');
+                });
+                
+                // Toggle sort direction
+                if (sortColumn === column) {
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortColumn = column;
+                    sortDirection = 'asc';
+                }
+                
+                // Add class to header
+                header.classList.add(sortDirection);
+                
+                // Sort rows
+                const sortedRows = rows.slice().sort((a, b) => {
+                    const aValue = a.cells[columnIndex].textContent;
+                    const bValue = b.cells[columnIndex].textContent;
+                    
+                    // Check if values are numbers
+                    const aNum = parseFloat(aValue);
+                    const bNum = parseFloat(bValue);
+                    
+                    if (!isNaN(aNum) && !isNaN(bNum)) {
+                        return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+                    }
+                    
+                    // Sort as strings
+                    return sortDirection === 'asc' 
+                        ? aValue.localeCompare(bValue) 
+                        : bValue.localeCompare(aValue);
+                });
+                
+                // Remove existing rows
+                while (tableBody.firstChild) {
+                    tableBody.removeChild(tableBody.firstChild);
+                }
+                
+                // Add sorted rows
+                sortedRows.forEach(row => {
+                    tableBody.appendChild(row);
+                });
+                
+                // Reapply filters after sorting
+                applyFilters();
+            }
+            
+            // Show error message
+            function showError(message) {
+                errorContainer.textContent = message;
+                errorContainer.style.display = 'block';
+            }
+            
+            // Refresh data every 5 minutes (300000 ms)
+            setInterval(() => {
+                fetchCSV(sheetUrl);
+            }, 300000);
+        });
+    </script>
+</body>
+</html>
